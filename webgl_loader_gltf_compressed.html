@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<link type="text/css" rel="stylesheet" href="main.css">
+	</head>
+
+	<body>
+
+		<div>
+			<label for="latitude">Latitude:</label>
+			<input type="text" id="latitude" />
+			<label for="longitude">Longitude:</label>
+			<input type="text" id="longitude" />
+			<button id="addPinButton">Add Pin</button>
+			<button id="rotButtonX">RotateX</button>
+			<button id="rotButtonY">RotateY</button>
+			<button id="rotButtonZ">RotateZ</button>
+		  </div>
+
+		<!-- Import maps polyfill -->
+		<!-- Remove this when import maps will be widely supported -->
+		<script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
+
+		<script type="importmap">
+			{
+				"imports": {
+					"three": "../build/three.module.js",
+					"three/addons/": "./jsm/"
+				}
+			}
+		</script>
+
+		<script type="module">
+
+      		import * as THREE from 'https://threejsfundamentals.org/threejs/resources/threejs/r122/build/three.module.js';
+      		import {OrbitControls} from 'https://threejsfundamentals.org/threejs/resources/threejs/r122/examples/jsm/controls/OrbitControls.js';
+      		import {GLTFLoader} from 'https://threejsfundamentals.org/threejs/resources/threejs/r122/examples/jsm/loaders/GLTFLoader.js';
+
+			let camera, scene, renderer;
+			var earth,pinMaterial;
+
+			init();
+			render();
+
+			function init() {
+
+				const container = document.createElement( 'div' );
+				document.body.appendChild( container );
+
+				renderer = new THREE.WebGLRenderer( { antialias: true } );
+				renderer.setPixelRatio( window.devicePixelRatio );
+				renderer.setSize( window.innerWidth, window.innerHeight );
+				renderer.useLegacyLights = false;
+				renderer.toneMapping = THREE.ACESFilmicToneMapping;
+				renderer.toneMappingExposure = 1;
+				container.appendChild( renderer.domElement );
+
+				camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 0.1, 10000 );
+				camera.position.set( -200, 200, 0 );
+
+				const pmremGenerator = new THREE.PMREMGenerator( renderer );
+
+				scene = new THREE.Scene();
+				scene.background = new THREE.Color( 0xbbbbbb );
+
+				const ambientLight = new THREE.AmbientLight(0xffffff, 5);
+				scene.add(ambientLight);
+
+;
+
+				const loader = new GLTFLoader().setPath( 'models/gltf/' );
+				loader.load( 'globe.glb', function ( gltf ) {
+
+					gltf.scene.scale.set(0.2, 0.2, 0.2); 
+					earth = gltf.scene;
+					earth.rotation.y = THREE.MathUtils.degToRad(90);
+					scene.add( gltf.scene );
+
+					render();
+
+				} );
+
+				const controls = new OrbitControls( camera, renderer.domElement );
+				controls.addEventListener( 'change', render ); // use if there is no animation loop
+				controls.minDistance = 0;
+				controls.maxDistance = 1000;
+				controls.target.set( 0, 0, 0 );
+				controls.update();
+
+				window.addEventListener( 'resize', onWindowResize );
+
+				      // Create pin material
+					  pinMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 }); // Bright red color
+
+						// Adjust the material properties for a brighter appearance
+						pinMaterial.side = THREE.DoubleSide;
+						pinMaterial.transparent = true;
+						pinMaterial.opacity = 0.8;
+			}
+
+			// Function to add a pin to the scene
+			function addPin() {
+				var latitude = parseFloat(document.getElementById('latitude').value);
+				var longitude = parseFloat(document.getElementById('longitude').value);
+
+				if (isNaN(latitude) || isNaN(longitude)) {
+					alert('Invalid latitude or longitude');
+					return;
+				}
+
+				// Convert latitude and longitude to 3D coordinates
+				var phi = (90 - latitude) * Math.PI / 180;
+				var theta = (180 - longitude) * Math.PI / 180;
+				var radius = 100;
+
+				var x = radius * Math.sin(phi) * Math.cos(theta);
+				var y = radius * Math.cos(phi);
+				var z = radius * Math.sin(phi) * Math.sin(theta);
+
+				// Create pin geometry
+				var pinGeometry = new THREE.SphereGeometry(1, 16, 16);
+				var pin = new THREE.Mesh(pinGeometry, pinMaterial);
+				pin.position.set(x, y, z);
+				scene.add(pin);
+				render();
+				showRot();
+			}
+
+			function onWindowResize() {
+
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+
+				renderer.setSize( window.innerWidth, window.innerHeight );
+
+				render();
+
+			}
+
+
+			function showRot(){
+				console.log(`Rotation X: ${THREE.MathUtils.radToDeg(earth.rotation.x).toFixed(2)}°<br>
+                             Rotation Y: ${THREE.MathUtils.radToDeg(earth.rotation.y).toFixed(2)}°<br>
+                             Rotation Z: ${THREE.MathUtils.radToDeg(earth.rotation.z).toFixed(2)}°`);
+			}
+
+			function render() {
+
+				renderer.render( scene, camera );
+
+			}
+
+			function rotPinX(){
+				earth.rotation.x -= THREE.MathUtils.degToRad(-5);
+				render();
+			}
+			function rotPinY(){
+				earth.rotation.y -= THREE.MathUtils.degToRad(-5);
+				render();
+			}
+			function rotPinZ(){
+				earth.rotation.z -= THREE.MathUtils.degToRad(-5);
+				render();
+			}
+			document.getElementById('addPinButton').addEventListener('click', addPin);
+			document.getElementById('rotButtonX').addEventListener('click', rotPinX);
+			document.getElementById('rotButtonY').addEventListener('click', rotPinY);
+			document.getElementById('rotButtonZ').addEventListener('click', rotPinZ);
+  
+		</script>
+
+	</body>
+</html>
